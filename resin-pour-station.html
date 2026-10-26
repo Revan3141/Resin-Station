@@ -1,1 +1,316 @@
-gone
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resin Pour Station</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  :root{--bg:#0d1117;--panel:#151b24;--panel-2:#1b2330;--line:#28323f;--ink:#d6dde6;--dim:#7d8a99;
+    --accent:#5ad1a8;--amber:#f2b441;--danger:#e5635e;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;--sans:'IBM Plex Sans',system-ui,sans-serif;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;padding:12px;max-width:760px;margin:0 auto;}
+  h1{font-size:13px;font-weight:600;margin:0 0 8px;color:var(--dim);letter-spacing:.5px;} h1 .tag{color:var(--accent);}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;}
+  label{display:block;font-size:11px;color:var(--dim);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.5px;}
+  input,select{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-family:var(--mono);font-size:14px;width:100%;}
+  select{font-family:var(--sans);}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;} .row>*{flex:1;min-width:60px;}
+  button{background:var(--accent);color:#06281e;border:none;border-radius:6px;padding:11px 14px;font-family:var(--sans);font-weight:600;font-size:14px;cursor:pointer;}
+  button:hover{filter:brightness(1.08);} button:active{transform:translateY(1px);}
+  button.ghost{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);}
+  button.sm{padding:7px 10px;font-size:12px;} button:disabled{opacity:.4;cursor:not-allowed;}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;} .btnrow button{flex:1;}
+  .status{font-family:var(--mono);font-size:12px;padding:8px 10px;border-radius:6px;background:rgba(229,99,94,.1);border:1px solid var(--danger);color:var(--danger);margin-top:10px;}
+  .status.hide{display:none;}
+  .mini{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);align-items:flex-start;}
+  .mini .lbl{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px;} .mini b{font-weight:600;font-size:22px;}
+  .flag{font-size:11px;letter-spacing:1px;} .flag.stable{color:var(--accent);} .flag.moving{color:var(--amber);}
+  .cue{border-radius:12px;padding:20px 16px;text-align:center;border:2px solid var(--line);background:var(--panel-2);transition:all .1s;margin-bottom:10px;}
+  .cue .comp{font-family:var(--mono);font-size:15px;letter-spacing:1px;color:var(--ink);margin-bottom:4px;}
+  .cue .step{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;}
+  .cue .cue-big{font-family:var(--mono);font-size:64px;font-weight:700;line-height:1;} .cue .cue-unit{font-size:22px;color:var(--dim);}
+  .cue .cue-lbl{font-family:var(--mono);font-size:13px;letter-spacing:2px;margin-top:8px;text-transform:uppercase;}
+  .cue.under{border-color:var(--amber);} .cue.under .cue-big,.cue.under .cue-lbl{color:var(--amber);}
+  .cue.good{border-color:var(--accent);background:rgba(90,209,168,.08);} .cue.good .cue-big,.cue.good .cue-lbl{color:var(--accent);}
+  .cue.over{border-color:var(--danger);background:rgba(229,99,94,.08);} .cue.over .cue-big,.cue.over .cue-lbl{color:var(--danger);}
+  .cue.base{border-color:var(--line);} .cue.base .cue-big{color:var(--ink);}
+  .cue.idle{padding:12px;} .cue.idle .comp,.cue.idle .step,.cue.idle .cue-unit{display:none;} .cue.idle .cue-big{font-size:14px;color:var(--dim);font-weight:500;}
+  .steps{margin-top:6px;}
+  .steprow{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;font-family:var(--mono);font-size:13px;border:1px solid transparent;}
+  .steprow.cur{background:var(--panel-2);border-color:var(--accent);}
+  .steprow.done{color:var(--dim);} .steprow .amt{color:var(--dim);} .steprow.done .amt{color:var(--accent);}
+  .hint{font-size:12px;color:var(--dim);margin-top:8px;}
+  .compedit{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+  .compedit input.nm{flex:2;} .compedit input.pt{flex:1;max-width:90px;text-align:center;}
+  .collapsed{display:none;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;} .chips button{flex:0 0 auto;}
+  .chips button.on{background:var(--accent);color:#06281e;border-color:var(--accent);}
+  .toprow{display:flex;gap:8px;align-items:flex-end;margin-top:10px;}
+</style>
+</head>
+<body>
+  <h1>Resin Pour Station <span class="tag">// Wicked Armor</span></h1>
+
+  <div class="panel">
+    <div class="mini">
+      <div><div class="lbl">Net <span class="flag" id="flag"></span></div><b id="weight">—</b> g</div>
+      <div style="text-align:right"><div class="lbl">Cup (at tare)</div><b id="tareLine">—</b> g</div>
+    </div>
+    <div class="toprow">
+      <button id="connect" style="flex:2">Connect scale</button>
+      <button id="test" class="ghost sm" style="flex:1">Test ♪</button>
+      <div style="flex:1"><label>Tol ± g</label><input id="tol" value="1" inputmode="decimal"></div>
+    </div>
+    <div id="status" class="status hide"></div>
+  </div>
+
+  <div class="panel">
+    <select id="resinSel"><option value="">— no resins yet —</option></select>
+    <div class="btnrow" style="margin-top:8px">
+      <button id="newResin" class="ghost sm">＋ New</button>
+      <button id="editResin" class="ghost sm" disabled>Edit</button>
+      <button id="delResin" class="ghost sm" disabled>Delete</button>
+    </div>
+    <div id="editor" class="collapsed" style="margin-top:12px">
+      <label>Resin name</label>
+      <input id="edName" placeholder="e.g. Epoxy 606 / SC320 rotocast">
+      <label style="margin-top:12px">Components (first is poured first, sets batch size)</label>
+      <div id="compList"></div>
+      <button id="addComp" class="ghost sm" style="margin-top:4px">＋ Add component</button>
+      <label style="margin-top:14px">Part A sizes — optional catalog (e.g. Grievous shoulder = 250)</label>
+      <div id="presetList"></div>
+      <button id="addPreset" class="ghost sm" style="margin-top:4px">＋ Add size</button>
+      <div class="btnrow" style="margin-top:12px">
+        <button id="saveResin">Save resin</button>
+        <button id="cancelEdit" class="ghost">Cancel</button>
+      </div>
+      <div class="hint">Parts are relative by weight. Sizes are Part A grams. Example SC320: Part A = 100, Urefil-3 = (factor), Part B = 90.</div>
+    </div>
+  </div>
+
+  <div id="baseChooser" class="collapsed panel">
+    <label>Part A — pick a size, type a target, or free-pour</label>
+    <div class="chips" id="presetChips"></div>
+    <div class="row" style="margin-top:6px">
+      <input id="customTarget" inputmode="decimal" placeholder="custom target g">
+      <button id="setTarget" class="ghost sm" style="flex:0 0 auto">Set target</button>
+    </div>
+  </div>
+
+  <div class="cue idle" id="cue">
+    <div class="comp" id="cueComp">—</div>
+    <div class="step" id="cueStep"></div>
+    <div><span class="cue-big" id="cueBig">select a resin</span><span class="cue-unit"> g</span></div>
+    <div class="cue-lbl" id="cueLbl"></div>
+  </div>
+
+  <div class="panel">
+    <div class="btnrow" id="controls">
+      <button id="capture" disabled>Capture base</button>
+      <button id="next" class="ghost" disabled>Next ▸</button>
+      <button id="newBatch" class="ghost" disabled>New batch</button>
+    </div>
+    <div class="steps" id="stepList"></div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  const $=(id)=>document.getElementById(id);
+  const KEY="wickedarmor_resins_v2";
+
+  function load(){ try{ const v=localStorage.getItem(KEY); if(v) return JSON.parse(v);}catch(e){} return []; }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(resins)); }catch(e){} }
+  let resins=load(), nextId=Math.max(0,...resins.map(r=>r.id||0))+1;
+  let selId=null, editId=null;
+
+  const SVC=0xfff0,CHAR=0xfff1;
+  let device=null,server=null,notifyChar=null,reconnecting=false;
+  let lastWeight=null,lastStable=false,prevG=null,tareWeight=null;
+
+  let batch={active:false,step:0,factor:null,baseline:0,baseTarget:null};
+  function curResin(){ return resins.find(r=>r.id===selId)||null; }
+  function presetsOf(r){ return (r&&r.presets)?r.presets:[]; }
+  function globalTol(){ return Math.max(0.1,parseFloat($("tol").value)||1); }
+
+  /* audio: fixed full volume (use phone side buttons) */
+  let actx=null,master=null,cueState="",lastBlip=-Infinity,inTolSince=null;
+  function armAudio(){ try{ if(!actx){const AC=window.AudioContext||window.webkitAudioContext;actx=new AC();master=actx.createGain();master.gain.value=1;master.connect(actx.destination);} if(actx.state==="suspended")actx.resume(); }catch(e){} }
+  function tone(f,d,v){ try{ if(!actx||!master)return; const o=actx.createOscillator(),g=actx.createGain(); o.type="square";o.frequency.value=f;o.connect(g);g.connect(master);
+    g.gain.setValueAtTime(v,actx.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+d);o.start();o.stop(actx.currentTime+d+0.02);}catch(e){} }
+  function ding(){ tone(1568,0.16,0.9); setTimeout(()=>tone(2093,0.24,0.9),130); }
+  function doneChime(){ tone(1319,0.14,0.9); setTimeout(()=>tone(1760,0.14,0.9),140); setTimeout(()=>tone(2637,0.28,0.9),300); }
+  function overTone(){ tone(196,0.34,0.9); }
+  function approachFreq(rem,zone){ const a=500,b=1760,r=Math.min(Math.max(rem,0),zone),t=Math.log(r+1)/Math.log(zone+1); return b-(b-a)*t; }
+
+  /* status is error-only; success just clears it */
+  function setErr(m){ const s=$("status"); if(m){ s.textContent=m; s.classList.remove("hide"); } else s.classList.add("hide"); }
+  function fmt(g){ return (g>=0?"":"-")+Math.abs(g).toFixed(1); }
+
+  function parse(dv){ if(dv.byteLength<17)return; const b=(i)=>dv.getUint8(i);
+    if(b(0)!==0xa5||b(7)!==0x87)return; const unitOk=b(8)===0xa1;
+    let raw=b(11)|(b(12)<<8)|(b(13)<<16); let g=raw/10; if(raw>0x800000)g=(raw-0x1000000)/10;
+    onWeight(g,(b(1)&0x20)!==0,unitOk); }
+  function onWeight(g,stable,unitOk){
+    lastWeight=g; lastStable=stable; $("weight").textContent=fmt(g);
+    const f=$("flag");
+    if(!unitOk){ f.textContent="⚠g"; f.className="flag moving"; setErr("Scale is not in grams — switch its unit to g."); }
+    else { f.textContent=stable?"●":"○"; f.className="flag "+(stable?"stable":"moving"); if($("status").textContent.indexOf("grams")>=0) setErr(null); }
+    if(prevG!==null&&Math.abs(g)<0.5&&prevG>0.5&&prevG<120&&!batch.active){ tareWeight=prevG; $("tareLine").textContent=fmt(tareWeight); }
+    prevG=g; updatePour(g);
+  }
+
+  function startBatch(){ const r=curResin(); if(!r||!r.comps.length){ batch.active=false; renderCue(); return; }
+    batch={active:true,step:0,factor:null,baseline:0,baseTarget:null}; cueState="";lastBlip=-Infinity;inTolSince=null;
+    tareWeight=null; $("tareLine").textContent="—";
+    $("capture").disabled=false; $("next").disabled=true; $("newBatch").disabled=false;
+    renderChooser(); renderCue(); renderSteps();
+  }
+  function renderChooser(){ const r=curResin();
+    const ch=$("baseChooser"), chips=$("presetChips"); chips.innerHTML="";
+    if(!batch.active||batch.step!==0){ ch.classList.add("collapsed"); return; }
+    ch.classList.remove("collapsed");
+    const free=document.createElement("button"); free.className="ghost sm"+(batch.baseTarget==null?" on":"");
+    free.textContent="Free pour"; free.onclick=()=>setBaseTarget(null); chips.appendChild(free);
+    presetsOf(r).forEach(p=>{ const b=document.createElement("button"); b.className="ghost sm"+(batch.baseTarget===+p.grams?" on":"");
+      b.textContent=p.name+" · "+p.grams+"g"; b.onclick=()=>setBaseTarget(+p.grams); chips.appendChild(b); });
+    $("customTarget").value = (batch.baseTarget!=null && !presetsOf(r).some(p=>+p.grams===batch.baseTarget)) ? batch.baseTarget : "";
+  }
+  function setBaseTarget(g){ batch.baseTarget=(g!=null&&g>0)?g:null; cueState="";lastBlip=-Infinity;inTolSince=null;
+    $("capture").disabled = batch.baseTarget!=null;
+    renderChooser(); renderCue();
+  }
+  function captureBase(){ const r=curResin(); if(!r||lastWeight===null)return;
+    const p1=parseFloat(r.comps[0].parts); if(!(p1>0)){ setErr("Base component needs parts > 0."); return; }
+    batch.factor=lastWeight/p1; batch.step=0;
+    if(r.comps.length===1){ finishBatch(); return; }
+    advanceStep(true);
+  }
+  function advanceStep(first){ const r=curResin();
+    batch.step=first?1:batch.step+1;
+    if(batch.step>=r.comps.length){ finishBatch(); return; }
+    batch.baseline=lastWeight; cueState="";lastBlip=-Infinity;inTolSince=null;
+    $("capture").disabled=true; $("next").disabled=false;
+    renderChooser(); renderCue(); renderSteps();
+  }
+  function finishBatch(){ const r=curResin(); batch.active=false; batch.step=r?r.comps.length:0;
+    $("capture").disabled=true; $("next").disabled=true; $("baseChooser").classList.add("collapsed");
+    doneChime(); renderSteps();
+    $("cue").className="cue good"; $("cueComp").textContent=r?r.name:""; $("cueStep").textContent="complete";
+    $("cueBig").textContent="✓"; $("cueLbl").textContent="batch done — new cup to loop";
+    setTimeout(()=>{ if(!batch.active) startBatch(); },1800);
+  }
+  function updatePour(net){
+    if(!batch.active) return;
+    const r=curResin(); if(!r)return;
+    let comp,amt,poured,rem; const tol=globalTol();
+    if(batch.step===0){
+      if(batch.baseTarget==null){ $("cueBig").textContent=fmt(net); return; }
+      poured=net; rem=batch.baseTarget-net; $("cueBig").textContent=fmt(rem);
+      if(Math.abs(rem)<=tol){
+        $("cue").className="cue good"; $("cueLbl").textContent="on target";
+        if(cueState!=="good"){ ding(); cueState="good"; }
+        if(lastStable){ if(inTolSince==null)inTolSince=performance.now(); else if(performance.now()-inTolSince>1500) captureBase(); }
+      } else if(rem<0){ $("cue").className="cue over"; $("cueLbl").textContent="over by "+fmt(-rem); inTolSince=null;
+        if(cueState!=="over"){ overTone(); cueState="over"; }
+      } else { $("cue").className="cue under"; $("cueLbl").textContent="to go"; inTolSince=null; cueState="";
+        if(poured>lastBlip+0.1){ tone(approachFreq(rem,Math.max(batch.baseTarget,8)),0.05,0.6); lastBlip=poured; } }
+      return;
+    }
+    comp=r.comps[batch.step]; amt=batch.factor*parseFloat(comp.parts);
+    poured=net-batch.baseline; rem=amt-poured;
+    $("cueBig").textContent=fmt(rem);
+    if(Math.abs(rem)<=tol){
+      $("cue").className="cue good"; $("cueLbl").textContent="on target";
+      if(cueState!=="good"){ ding(); cueState="good"; }
+      if(lastStable){ if(inTolSince==null)inTolSince=performance.now(); else if(performance.now()-inTolSince>1500) advanceStep(false); }
+    } else if(rem<0){ $("cue").className="cue over"; $("cueLbl").textContent="over by "+fmt(-rem); inTolSince=null;
+      if(cueState!=="over"){ overTone(); cueState="over"; }
+    } else { $("cue").className="cue under"; $("cueLbl").textContent="to go"; inTolSince=null; cueState="";
+      if(poured>lastBlip+0.1){ tone(approachFreq(rem,Math.max(amt,8)),0.05,0.6); lastBlip=poured; } }
+  }
+
+  function renderCue(){ const r=curResin();
+    if(!r){ $("cue").className="cue idle"; $("cueBig").textContent="select a resin"; $("cueComp").textContent=""; $("cueStep").textContent=""; $("cueLbl").textContent=""; return; }
+    if(!batch.active){ $("cue").className="cue idle"; $("cueBig").textContent=r.name+" — tare & pour base"; $("cueComp").textContent=""; $("cueStep").textContent=""; $("cueLbl").textContent=""; return; }
+    const comp=r.comps[batch.step];
+    $("cueComp").textContent=comp.name; $("cueStep").textContent="step "+(batch.step+1)+" of "+r.comps.length;
+    if(batch.step===0){
+      if(batch.baseTarget!=null){ $("cue").className="cue under"; $("cueStep").textContent="base → "+fmt(batch.baseTarget)+" g"; $("cueLbl").textContent="to go"; }
+      else { $("cue").className="cue base"; $("cueBig").textContent=fmt(lastWeight||0); $("cueLbl").textContent="base — tap Capture"; }
+    } else { $("cue").className="cue under"; $("cueLbl").textContent="to go"; }
+  }
+  function renderSteps(){ const r=curResin(); const L=$("stepList"); L.innerHTML=""; if(!r)return;
+    r.comps.forEach((c,i)=>{ const row=document.createElement("div");
+      row.className="steprow"+(batch.active&&i===batch.step?" cur":"")+(batch.active&&i<batch.step?" done":"");
+      let amt=""; const pf = batch.factor!=null ? batch.factor : (batch.baseTarget!=null ? batch.baseTarget/parseFloat(r.comps[0].parts) : null);
+      amt = pf!=null ? fmt(pf*parseFloat(c.parts))+" g" : c.parts+" parts";
+      row.innerHTML='<span>'+(i+1)+'. '+esc(c.name)+'</span><span class="amt">'+amt+'</span>'; L.appendChild(row); });
+  }
+  function esc(s){ return (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])); }
+
+  function renderSelect(){ const sel=$("resinSel"); sel.innerHTML="";
+    if(!resins.length){ sel.innerHTML='<option value="">— no resins yet —</option>'; }
+    resins.forEach(r=>{ const o=document.createElement("option"); o.value=r.id; o.textContent=r.name+" ("+r.comps.map(c=>c.parts).join(":")+")"; sel.appendChild(o); });
+    if(selId!=null) sel.value=selId;
+    const has=selId!=null&&curResin(); $("editResin").disabled=!has; $("delResin").disabled=!has;
+  }
+
+  function openEditor(r){ editId=r?r.id:null; $("edName").value=r?r.name:"";
+    const CL=$("compList"); CL.innerHTML="";
+    (r?r.comps:[{name:"Part A",parts:"100"},{name:"Part B",parts:"43"}]).forEach(c=>addCompRow(c.name,c.parts));
+    const PL=$("presetList"); PL.innerHTML=""; presetsOf(r).forEach(p=>addPresetRow(p.name,p.grams));
+    $("editor").classList.remove("collapsed");
+  }
+  function addCompRow(name,parts){ const CL=$("compList"); const d=document.createElement("div"); d.className="compedit";
+    d.innerHTML='<input class="nm" placeholder="component" value="'+esc(name||"")+'"><input class="pt" inputmode="decimal" placeholder="parts" value="'+esc(parts||"")+'"><button class="ghost sm" data-x>✕</button>';
+    d.querySelector("[data-x]").onclick=()=>d.remove(); CL.appendChild(d);
+  }
+  function addPresetRow(name,grams){ const PL=$("presetList"); const d=document.createElement("div"); d.className="compedit";
+    d.innerHTML='<input class="nm" placeholder="part / size name" value="'+esc(name||"")+'"><input class="pt" inputmode="decimal" placeholder="g" value="'+esc(grams!=null?grams:"")+'"><button class="ghost sm" data-x>✕</button>';
+    d.querySelector("[data-x]").onclick=()=>d.remove(); PL.appendChild(d);
+  }
+  function readEditor(){ const name=$("edName").value.trim();
+    const comps=[...$("compList").querySelectorAll(".compedit")].map(r=>({name:r.querySelector(".nm").value.trim()||"component",parts:r.querySelector(".pt").value.trim()})).filter(c=>c.parts!=="");
+    const presets=[...$("presetList").querySelectorAll(".compedit")].map(r=>({name:r.querySelector(".nm").value.trim()||"size",grams:r.querySelector(".pt").value.trim()})).filter(p=>parseFloat(p.grams)>0);
+    return {name,comps,presets}; }
+
+  async function findChar(){ let svc; try{svc=await server.getPrimaryService(SVC);}catch(e){ const all=await server.getPrimaryServices(); for(const s of all)for(const c of await s.getCharacteristics())if(c.uuid.includes("fff1"))return c; throw e;} return await svc.getCharacteristic(CHAR); }
+  async function startNotify(){ notifyChar=await findChar(); await notifyChar.startNotifications(); notifyChar.addEventListener("characteristicvaluechanged",e=>parse(e.target.value)); }
+  async function connect(){ armAudio(); if(!navigator.bluetooth){ setErr("Use Chrome on Android over https."); return; }
+    try{ setErr(null);
+      device=await navigator.bluetooth.requestDevice({filters:[{namePrefix:"Etekcity"}],optionalServices:[SVC,0xfff0,0x180a,0x1800]});
+      device.addEventListener("gattserverdisconnected",onDrop); server=await device.gatt.connect(); await startNotify();
+      $("connect").style.display="none";
+    }catch(e){ setErr("Connect failed: "+e.message); } }
+  function onDrop(){ $("flag").textContent=""; setErr("Scale disconnected — waiting for it to power back on…"); tryReconnect(); }
+  async function tryReconnect(){ if(reconnecting)return; reconnecting=true;
+    const a=async()=>{ try{server=await device.gatt.connect();await startNotify();setErr(null);reconnecting=false;}catch(e){setTimeout(a,2000);} }; a(); }
+
+  $("connect").onclick=connect;
+  $("test").onclick=()=>{ armAudio(); ding(); };
+  $("resinSel").onchange=()=>{ selId=$("resinSel").value?+$("resinSel").value:null; renderSelect(); if(selId!=null)startBatch(); else {batch.active=false;renderCue();renderSteps();} };
+  $("newResin").onclick=()=>{ armAudio(); openEditor(null); };
+  $("editResin").onclick=()=>{ const r=curResin(); if(r)openEditor(r); };
+  $("delResin").onclick=()=>{ const r=curResin(); if(r&&confirm("Delete "+r.name+"?")){ resins=resins.filter(x=>x.id!==r.id); selId=null; save(); renderSelect(); batch.active=false; renderCue(); renderSteps(); } };
+  $("addComp").onclick=()=>addCompRow("","");
+  $("addPreset").onclick=()=>addPresetRow("","");
+  $("setTarget").onclick=()=>{ armAudio(); const v=parseFloat($("customTarget").value); if(v>0) setBaseTarget(v); else setErr("Enter a target over 0, or tap Free pour."); };
+  $("cancelEdit").onclick=()=>$("editor").classList.add("collapsed");
+  $("saveResin").onclick=()=>{ const d=readEditor();
+    if(!d.name){ setErr("Name the resin."); return; }
+    if(d.comps.length<1||!(parseFloat(d.comps[0].parts)>0)){ setErr("Add at least a base component with parts > 0."); return; }
+    setErr(null);
+    if(editId!=null){ const r=resins.find(x=>x.id===editId); r.name=d.name; r.comps=d.comps; r.presets=d.presets; }
+    else { const r={id:nextId++,name:d.name,comps:d.comps,presets:d.presets}; resins.push(r); selId=r.id; }
+    save(); $("editor").classList.add("collapsed"); renderSelect(); if(selId!=null)startBatch(); };
+  $("capture").onclick=()=>{ armAudio(); if(lastWeight===null){setErr("No reading yet.");return;} captureBase(); };
+  $("next").onclick=()=>{ advanceStep(false); };
+  $("newBatch").onclick=()=>{ startBatch(); };
+
+  renderSelect(); renderCue();
+})();
+</script>
+</body>
+</html>
